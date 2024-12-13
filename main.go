@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"log"
 )
 
 func wsocket(w http.ResponseWriter, r *http.Request) {
@@ -23,20 +24,25 @@ func wsocket(w http.ResponseWriter, r *http.Request) {
 	baseKey := base64.StdEncoding.EncodeToString(shaHash.Sum(nil))
 	fmt.Println(baseKey)
 
-	netConn, _, err := http.NewResponseController(w).Hijack()
+	netConn, brw, err := http.NewResponseController(w).Hijack()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	defer func() {
+		err := netConn.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
-	//buf := brw.Writer.AvailableBuffer()
-	p := []byte{}
-	p = append(p, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: "...)
-	p = append(p, baseKey...)
-	p = append(p, "\r\n"...)
-	p = append(p, "\r\n"...)
+	buf := brw.Writer.AvailableBuffer()
+	buf = append(buf, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: "...)
+	buf = append(buf, baseKey...)
+	buf = append(buf, "\r\n"...)
+	buf = append(buf, "\r\n"...)
 
-	_, err = netConn.Write(p)
+	_, err = netConn.Write(buf)
 	if err != nil {
 		fmt.Println(err)
 		return
