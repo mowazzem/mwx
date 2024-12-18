@@ -1,64 +1,52 @@
 package main
 
 import (
-	"crypto/sha1"
-	"encoding/base64"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
-	"log"
 )
 
 func wsocket(w http.ResponseWriter, r *http.Request) {
-	wskey := r.Header.Get("Sec-WebSocket-Key")
-	wskey = strings.Trim(wskey, " ")
-	fmt.Println(wskey)
-
-	guid := "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-
-	shaHash := sha1.New()
-	shaHash.Write([]byte(wskey))
-	shaHash.Write([]byte(guid))
-
-	baseKey := base64.StdEncoding.EncodeToString(shaHash.Sum(nil))
-	fmt.Println(baseKey)
-
-	netConn, brw, err := http.NewResponseController(w).Hijack()
+	c, err := Handshake(w, r)
 	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer func() {
-		err := netConn.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
-
-	buf := brw.Writer.AvailableBuffer()
-	buf = append(buf, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: "...)
-	buf = append(buf, baseKey...)
-	buf = append(buf, "\r\n"...)
-	buf = append(buf, "\r\n"...)
-
-	_, err = netConn.Write(buf)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	if err := netConn.SetDeadline(time.Time{}); err != nil {
 		panic(err)
 	}
+	var mk []byte
+	once:=true
+	for {
+		buf := make([]byte, 10)
+		_, err := c.Read(buf)
+		if err != nil {
+			panic(err)
+		}
+		firstByte := buf[0]
+		fmt.Printf("%08b\n",firstByte)
+		fmt.Printf("%08b\n", buf[1])
+		pay:=buf
+		if once{
+			mk = buf[2:6]
+			pay=buf[6:]
+			once=false
+		}
+		um := []byte{}
 
+
+		for i, b := range pay {
+			if b == 0 {
+				break
+			}
+			ub := b ^ mk[i%4]
+			um = append(um, ub)
+		}
+		once=true
+		fmt.Println(string(um))
+	}
 }
 
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", wsocket)
 	s := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8089",
 		Handler: mux,
 	}
 	s.ListenAndServe()
