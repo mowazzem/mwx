@@ -11,9 +11,13 @@ import (
 	"time"
 )
 
+type conn struct {
+	net.Conn
+}
+
 // Handshake open a handshake for websocket
 // rfc6455, 1.3
-func Handshake(w http.ResponseWriter, r *http.Request) (net.Conn, error) {
+func Handshake(w http.ResponseWriter, r *http.Request) (*conn, error) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write([]byte("wrong http method"))
@@ -44,7 +48,34 @@ func Handshake(w http.ResponseWriter, r *http.Request) (net.Conn, error) {
 	if err := netConn.SetDeadline(time.Time{}); err != nil {
 		return nil, err
 	}
-	return netConn, nil
+	return &conn{netConn}, nil
 }
 
+func (c *conn) ReadMsg() (string, error) {
+	for {
+		buf := make([]byte, 1024)
+		_, err := c.Read(buf)
+		if err != nil {
+			panic(err)
+		}
 
+		_1stb := buf[0]
+		fin := (_1stb & 128) == 128
+		fmt.Println(fin)
+		if fin {
+			break
+		}
+	}
+	return "", nil
+}
+
+func (c *conn) Run(f func(msg string)) error {
+	for c!=nil {
+		msg,err:=c.ReadMsg()
+		if err!=nil {
+			return err
+		}
+		f(msg)
+	}
+	return nil
+}
