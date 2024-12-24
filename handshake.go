@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -65,6 +64,10 @@ func (c *conn) ReadMsg() (string, error) {
 	_2b := buf[1]
 	fin := (_1b & 128) == 128
 	_ = fin
+	op := _1b & 15
+	if op == 8 {
+		return "", errors.New("connection closed from client")
+	}
 	plen := _2b & 127
 	plength := uint64(plen) + 1
 	mk := buf[2:6]
@@ -82,7 +85,6 @@ func (c *conn) ReadMsg() (string, error) {
 					panic(err)
 				}
 				payload = append(payload, buf2...)
-				fmt.Println("done", len(payload), plength)
 			}
 			if plength < uint64(len(payload)) {
 				payload = payload[:plength]
