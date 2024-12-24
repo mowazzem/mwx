@@ -3,8 +3,8 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -65,27 +65,18 @@ func (c *conn) ReadMsg() (string, error) {
 	fin := (_1b & 128) == 128
 	_ = fin
 	plen := _2b & 127
-	plength := uint64(plen) + 1
-	mk := buf[2:6]
-	payload := buf[6:plength]
+	plength := plen
 	if plen == 126 {
-		l := binary.BigEndian.Uint64(append([]byte{0, 0, 0, 0, 0, 0}, buf[2:4]...))
+		pl2 := buf[2:4]
+		l := byte(0)
+		for _, b := range pl2 {
+			l |= b
+		}
 		plength = l
-		mk = buf[4:8]
-		payload = buf[8:plength]
-	} else if plen == 126 {
-		l := binary.BigEndian.Uint64(append([]byte{0, 0, 0, 0, 0, 0}, buf[2:9]...))
-		plength = l
-		mk = buf[9:13]
-		payload = buf[13:plength]
+		fmt.Println(l)
 	}
-	_ = plength
-	ump := []byte{}
-	for i, p := range payload {
-		ump = append(ump, p^mk[i%4])
-	}
-
-	return string(ump), nil
+	fmt.Println(plength)
+	return "", nil
 }
 
 func (c *conn) Run(f func(msg string)) error {

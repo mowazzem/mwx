@@ -10,6 +10,7 @@ func wsocket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(c)
 
 	err = c.Run(func(msg string) {
 		fmt.Println(msg)
