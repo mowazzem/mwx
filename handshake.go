@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -50,7 +51,7 @@ func Handshake(w http.ResponseWriter, r *http.Request) (*conn, error) {
 }
 
 const (
-	defaultBufSize = 1024 * 100
+	defaultBufSize = 1024 * 4
 )
 
 func (c *conn) ReadMsg() (string, error) {
@@ -72,7 +73,23 @@ func (c *conn) ReadMsg() (string, error) {
 		l := binary.BigEndian.Uint64(append([]byte{0, 0, 0, 0, 0, 0}, buf[2:4]...))
 		plength = l
 		mk = buf[4:8]
-		payload = buf[8:plength]
+		payload = buf[8:]
+		if plength > 4088 {
+			for uint64(len(payload)) < plength {
+				buf2 := make([]byte, 4096)
+				_, err = c.Read(buf2)
+				if err != nil {
+					panic(err)
+				}
+				payload = append(payload, buf2...)
+				fmt.Println("done", len(payload), plength)
+			}
+			if plength < uint64(len(payload)) {
+				payload = payload[:plength]
+			}
+		} else {
+			payload = buf[8:plength]
+		}
 	} else if plen == 126 {
 		l := binary.BigEndian.Uint64(append([]byte{0, 0, 0, 0, 0, 0}, buf[2:9]...))
 		plength = l
