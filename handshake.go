@@ -86,9 +86,7 @@ func (c *conn) ReadMsg() (string, error) {
 				}
 				payload = append(payload, buf2...)
 			}
-			if plength < uint64(len(payload)) {
-				payload = payload[:plength]
-			}
+			payload = payload[:plength]
 		} else {
 			payload = buf[8:plength]
 		}
