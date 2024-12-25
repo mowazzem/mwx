@@ -91,7 +91,7 @@ func (c *conn) ReadMsg() (string, error) {
 		} else {
 			payload = buf[8:plength]
 		}
-	} else if plen == 126 {
+	} else if plen == 127 {
 		l := binary.BigEndian.Uint64(append([]byte{0, 0, 0, 0, 0, 0}, buf[2:9]...))
 		plength = l
 		mk = buf[9:13]
