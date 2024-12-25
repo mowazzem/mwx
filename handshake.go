@@ -64,6 +64,7 @@ func (c *conn) ReadMsg() (string, error) {
 	_2b := buf[1]
 	fin := (_1b & 128) == 128
 	_ = fin
+	isMasked := _2b&128 == 128
 	op := _1b & 15
 	if op == 8 {
 		return "", errors.New("connection closed from client")
@@ -99,8 +100,12 @@ func (c *conn) ReadMsg() (string, error) {
 	}
 	_ = plength
 	ump := []byte{}
-	for i, p := range payload {
-		ump = append(ump, p^mk[i%4])
+	if isMasked {
+		for i, p := range payload {
+			ump = append(ump, p^mk[i%4])
+		}
+	} else {
+		ump = payload
 	}
 
 	return string(ump), nil
