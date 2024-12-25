@@ -72,6 +72,7 @@ func (c *conn) ReadMsg() (string, error) {
 	plength := uint64(plen) + 1
 	mk := buf[2:6]
 	payload := buf[6:plength]
+	// RFC 6455, 5.2
 	if plen == 126 {
 		l := binary.BigEndian.Uint64(append([]byte{0, 0, 0, 0, 0, 0}, buf[2:4]...))
 		plength = l
